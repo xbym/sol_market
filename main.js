@@ -1,10 +1,9 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
-const fs = require('fs').promises;
+const fs = require('fs');
 const axios = require('axios');
 const { Connection, PublicKey, Keypair } = require('@solana/web3.js');
 const { getPumpFunQuote, getTokenInfo, getTokenBalance } = require('./pumpFunAPI');
-const { dialog } = require('electron');
 const csv = require('csv-stringify/sync');
 
 let mainWindow;
@@ -12,6 +11,29 @@ let wallets = [];
 const tokenAddress = "89jtQzY4uqYUGby5AftFg6SnFNB9gfeptnpxUcY5pump"; // 替换为您的代币地址
 const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
 
+ipcMain.handle('save-csv', async (event, csvData) => {
+  if (!csvData) {
+    console.error('No CSV data received');
+    return { success: false, message: '没有接收到 CSV 数据' };
+  }
+  try {
+    const { filePath } = await dialog.showSaveDialog({
+      title: '保存 CSV 文件',
+      defaultPath: 'wallets.csv',
+      filters: [{ name: 'CSV 文件', extensions: ['csv'] }]
+    });
+
+    if (filePath) {
+      fs.writeFileSync(filePath, csvData, 'utf-8');
+      return { success: true, message: '文件保存成功' };
+    } else {
+      return { success: false, message: '用户取消了保存操作' };
+    }
+  } catch (error) {
+    console.error('保存文件时出错:', error);
+    return { success: false, message: '保存文件时出错: ' + error.message };
+  }
+});
 // 批量导入钱包
 ipcMain.handle('bulk-import-wallets', async (event, importedWallets) => {
     try {
@@ -26,13 +48,15 @@ ipcMain.handle('bulk-import-wallets', async (event, importedWallets) => {
     }
   });
   
-  // 批量导出钱包
   ipcMain.handle('bulk-export-wallets', async () => {
     try {
       const regularWallets = wallets.filter(w => w.type === 'regular');
+      console.log('Wallets to export:', regularWallets); // 添加这行
       const csvData = csv.stringify(regularWallets.map(w => [w.publicKey, w.privateKey]));
-      return { success: true,  csvData };
+      console.log('CSV ', csvData); // 添加这行
+      return { success: true, data: csvData };
     } catch (error) {
+      console.error('Export error:', error);
       return { success: false, error: error.message };
     }
   });
@@ -102,7 +126,8 @@ ipcMain.handle('generate-wallets', async (event, count) => {
     newWallets.push(wallet);
     wallets.push(wallet);
   }
-  return newWallets.map(w => ({ publicKey: w.publicKey, type: w.type }));
+  console.log('Generated wallets:', wallets); // 添加日志
+  return newWallets; // 返回完整的钱包信息
 });
 
 // 获取所有钱包

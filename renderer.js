@@ -142,17 +142,20 @@ document.getElementById('import-file').addEventListener('change', async (event) 
 // 批量导出钱包
 document.getElementById('bulk-export').addEventListener('click', async () => {
     const result = await window.electronAPI.bulkExportWallets();
+    console.log('Export result:', result); // 添加这行
     if (result.success) {
-        const blob = new Blob([result.data], { type: 'text/csv' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = 'wallets.csv';
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        alert('钱包批量导出成功');
+        console.log("Received CSV data:", result.data);
+        
+        // 使用新的 API 方法保存文件
+        const saveResult = await window.electronAPI.saveCsvFile(result.data);
+        
+        if (saveResult.success) {
+            console.log("File saved successfully");
+            alert('钱包批量导出成功');
+        } else {
+            console.error("Failed to save file:", saveResult.message);
+            alert('保存文件失败: ' + saveResult.message);
+        }
     } else {
         alert('钱包批量导出失败: ' + result.error);
     }
