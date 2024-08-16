@@ -112,55 +112,6 @@ document.getElementById('generate-wallets').addEventListener('click', async () =
     wallets.forEach(displayWallet);
 });
 
-// 批量导入钱包
-document.getElementById('bulk-import').addEventListener('click', () => {
-    document.getElementById('import-file').click();
-});
-
-document.getElementById('import-file').addEventListener('change', async (event) => {
-    const file = event.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            const content = e.target.result;
-            const wallets = content.split('\n').map(line => {
-                const [publicKey, privateKey] = line.split(',');
-                return { publicKey: publicKey.trim(), privateKey: privateKey.trim() };
-            });
-            const result = await window.electronAPI.bulkImportWallets(wallets);
-            if (result.success) {
-                alert('钱包批量导入成功');
-                await initializeWallets();
-            } else {
-                alert('钱包批量导入失败: ' + result.error);
-            }
-        };
-        reader.readAsText(file);
-    }
-});
-
-// 批量导出钱包
-document.getElementById('bulk-export').addEventListener('click', async () => {
-    const result = await window.electronAPI.bulkExportWallets();
-    console.log('Export result:', result); // 添加这行
-    if (result.success) {
-        console.log("Received CSV data:", result.data);
-        
-        // 使用新的 API 方法保存文件
-        const saveResult = await window.electronAPI.saveCsvFile(result.data);
-        
-        if (saveResult.success) {
-            console.log("File saved successfully");
-            alert('钱包批量导出成功');
-        } else {
-            console.error("Failed to save file:", saveResult.message);
-            alert('保存文件失败: ' + saveResult.message);
-        }
-    } else {
-        alert('钱包批量导出失败: ' + result.error);
-    }
-});
-
 // 刷新余额
 document.getElementById('refresh-balances').addEventListener('click', refreshAllWalletBalances);
 

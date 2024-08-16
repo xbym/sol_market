@@ -9,8 +9,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   generateWallets: (count) => ipcRenderer.invoke('generate-wallets', count),
   getWallets: () => ipcRenderer.invoke('get-wallets'),
   getWalletBalance: (publicKey) => ipcRenderer.invoke('get-wallet-balance', publicKey),
-  clearRegularWallets: () => ipcRenderer.invoke('clear-regular-wallets'),
-  bulkImportWallets: (wallets) => ipcRenderer.invoke('bulk-import-wallets', wallets),
-  bulkExportWallets: () => ipcRenderer.invoke('bulk-export-wallets'),
-  saveCsvFile: (csvData) => ipcRenderer.invoke('save-csv', csvData),
+  clearRegularWallets: () => ipcRenderer.invoke('clear-regular-wallets')
 });
