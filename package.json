@@ -1,19 +1,19 @@
 {
-  "name": "sol_market",
+  "name": "market_cap_bot",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Meme 代币市值管理机器人",
+  "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "electron ."
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "description": "",
   "dependencies": {
     "@solana/web3.js": "^1.95.2",
-    "axios": "^1.7.4",
-    "chart.js": "^4.4.3",
-    "express": "^4.19.2",
-    "socket.io": "^4.7.5"
+    "axios": "^0.24.0",
+    "chart.js": "^3.7.0",
+    "csv-stringify": "^6.5.1",
+    "moment": "^2.30.1"
+  },
+  "devDependencies": {
+    "electron": "^31.4.0"
   }
 }

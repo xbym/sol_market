@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Meme 代币市值管理机器人</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="left-panel">
+            <h1>Meme 代币市值管理机器人</h1>
+            <div id="token-info"></div>
+            <div>
+                <h2>当前价格: <span id="current-price">--</span> SOL</h2>
+            </div>
+            <canvas id="price-chart"></canvas>
+            <div>
+                <h3>API密钥和钱包管理</h3>
+                <button id="generate-api-key">生成新的API密钥和钱包</button>
+                <div id="api-key-info"></div>
+                <h3>批量生成钱包</h3>
+                <input type="number" id="wallet-count" min="1" max="50" value="1">
+                <button id="generate-wallets">批量生成钱包</button>
+                <button id="bulk-import">批量导入钱包</button>
+                <button id="bulk-export">批量导出钱包</button>
+                <input type="file" id="import-file" style="display: none;">
+                <button id="refresh-balances">刷新余额</button>
+                <button id="clear-wallets">清空批量钱包</button>
+            </div>
+        </div>
+        <div class="right-panel">
+            <h3>钱包列表</h3>
+            <div id="wallet-list"></div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script>
+    <script src="renderer.js"></script>
+</body>
+</html>
