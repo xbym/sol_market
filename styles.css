@@ -2,6 +2,7 @@ body {
     font-family: Arial, sans-serif;
     margin: 0;
     padding: 0;
+    background-color: #f0f0f0;
 }
 
 .container {
@@ -12,13 +13,14 @@ body {
 .left-panel {
     flex: 2;
     padding: 20px;
+    background-color: #ffffff;
     overflow-y: auto;
 }
 
 .right-panel {
     flex: 1;
     padding: 20px;
-    background-color: #f0f0f0;
+    background-color: #e0e0e0;
     overflow-y: auto;
 }
 
@@ -34,7 +36,7 @@ h1, h2, h3 {
 
 button {
     padding: 10px 20px;
-    font-size: 16px;
+    font-size: 14px;
     cursor: pointer;
     background-color: #4CAF50;
     color: white;
@@ -48,10 +50,13 @@ button:hover {
     background-color: #45a049;
 }
 
-input[type="number"] {
+input[type="number"], input[type="text"], select, textarea {
     padding: 10px;
-    font-size: 16px;
+    font-size: 14px;
     margin-right: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
 }
 
 #wallet-list {
@@ -64,8 +69,72 @@ input[type="number"] {
     padding: 10px;
     margin-bottom: 10px;
     border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .wallet-item p {
     margin: 5px 0;
+}
+
+.wallet-item input[type="checkbox"] {
+    margin-left: 10px;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.4);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 15% auto;
+    padding: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    max-width: 500px;
+    border-radius: 5px;
+}
+
+#batch-transfer-input {
+    width: 100%;
+    height: 150px;
+    margin-bottom: 10px;
+}
+
+#batch-trade-modal .modal-content input,
+#batch-trade-modal .modal-content select {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+#batch-trade-modal .modal-content label {
+    display: block;
+    margin-bottom: 10px;
+}
+
+#api-key-info {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+#current-price {
+    font-weight: bold;
+    color: #4CAF50;
+}
+
+.sol-balance, .token-balance {
+    font-weight: bold;
 }

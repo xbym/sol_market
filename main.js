@@ -1,8 +1,8 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-const path = require('path');
+const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const fs = require('fs').promises;
+const path = require('path');
 const axios = require('axios');
-const { Connection, PublicKey, Keypair } = require('@solana/web3.js');
+const { Connection, PublicKey, Keypair, Transaction, SystemProgram, sendAndConfirmTransaction } = require('@solana/web3.js');
 const { getPumpFunQuote, getTokenInfo, getTokenBalance } = require('./pumpFunAPI');
 
 let mainWindow;
@@ -99,6 +99,109 @@ ipcMain.handle('get-wallet-balance', async (event, publicKey) => {
 ipcMain.handle('clear-regular-wallets', () => {
   wallets = wallets.filter(wallet => wallet.type === 'api');
   return { success: true };
+});
+
+// 导出钱包
+ipcMain.handle('export-wallets', async () => {
+  const { filePath } = await dialog.showSaveDialog({
+    buttonLabel: '导出',
+    defaultPath: path.join(app.getPath('documents'), 'wallets.json')
+  });
+
+  if (filePath) {
+    const walletsToExport = wallets.filter(w => w.type === 'regular').map(w => ({
+      publicKey: w.publicKey,
+      privateKey: w.privateKey
+    }));
+    await fs.writeFile(filePath, JSON.stringify(walletsToExport, null, 2));
+    return { success: true, message: '钱包已成功导出' };
+  }
+  return { success: false, message: '导出已取消' };
+});
+
+// 导入钱包
+ipcMain.handle('import-wallets', async () => {
+  const { filePaths } = await dialog.showOpenDialog({
+    buttonLabel: '导入',
+    properties: ['openFile'],
+    filters: [{ name: 'JSON', extensions: ['json'] }]
+  });
+
+  if (filePaths && filePaths.length > 0) {
+    const fileContent = await fs.readFile(filePaths[0], 'utf8');
+    const importedWallets = JSON.parse(fileContent);
+    const newWallets = importedWallets.filter(w => !wallets.some(existing => existing.publicKey === w.publicKey))
+      .map(w => ({ ...w, type: 'regular' }));
+    wallets.push(...newWallets);
+    return { success: true, message: `已导入 ${newWallets.length} 个新钱包`, newWallets };
+  }
+  return { success: false, message: '导入已取消' };
+});
+
+// 批量转账 SOL
+ipcMain.handle('batch-transfer-sol', async (event, transactions) => {
+  try {
+    const results = [];
+    for (const tx of transactions) {
+      const fromWallet = wallets.find(w => w.publicKey === tx.from);
+      if (!fromWallet) {
+        results.push({ status: 'failed', message: `钱包 ${tx.from} 未找到` });
+        continue;
+      }
+
+      const fromPubkey = new PublicKey(tx.from);
+      const toPubkey = new PublicKey(tx.to);
+      const lamports = tx.amount * LAMPORTS_PER_SOL;
+
+      const transaction = new Transaction().add(
+        SystemProgram.transfer({
+          fromPubkey,
+          toPubkey,
+          lamports
+        })
+      );
+
+      const signers = [Keypair.fromSecretKey(Buffer.from(fromWallet.privateKey, 'hex'))];
+
+      const signature = await sendAndConfirmTransaction(
+        connection,
+        transaction,
+        signers
+      );
+
+      results.push({ status: 'success', signature, from: tx.from, to: tx.to, amount: tx.amount });
+    }
+    return results;
+  } catch (error) {
+    console.error('Batch transfer error:', error);
+    return { error: error.message };
+  }
+});
+
+// 执行交易
+ipcMain.handle('execute-trade', async (event, tradeParams) => {
+  try {
+    const config = JSON.parse(await fs.readFile('config.json', 'utf8'));
+    const response = await axios.post('https://rpc.api-pump.fun/trade', {
+      mode: tradeParams.mode,
+      token: tradeParams.token,
+      amount: tradeParams.amount,
+      amountInSol: tradeParams.amountInSol,
+      slippage: tradeParams.slippage,
+      priorityFee: tradeParams.priorityFee,
+      private: tradeParams.privateKey // 注意：仅在用户提供私钥时才包含这个字段
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': config.apiKey
+      }
+    });
+
+    return { success: true, signature: response.data.signature };
+  } catch (error) {
+    console.error('Trade execution error:', error);
+    return { success: false, error: error.response ? error.response.data : error.message };
+  }
 });
 
 // 价格更新逻辑

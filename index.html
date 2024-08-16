@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="zh">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meme 代币市值管理机器人</title>
     <link rel="stylesheet" href="styles.css">
 </head>
@@ -23,6 +24,12 @@
                 <button id="generate-wallets">批量生成钱包</button>
                 <button id="refresh-balances">刷新余额</button>
                 <button id="clear-wallets">清空批量钱包</button>
+                <button id="export-wallets">导出普通钱包</button>
+                <button id="import-wallets">导入普通钱包</button>
+            </div>
+            <div>
+                <h3>批量交易</h3>
+                <button id="open-batch-trade-modal">执行批量交易</button>
             </div>
         </div>
         <div class="right-panel">
@@ -30,8 +37,29 @@
             <div id="wallet-list"></div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+
+    <!-- 批量交易模态框 -->
+    <div id="batch-trade-modal" class="modal">
+        <div class="modal-content">
+            <h2>批量交易</h2>
+            <select id="trade-mode">
+                <option value="buy">买入</option>
+                <option value="sell">卖出</option>
+            </select>
+            <input type="text" id="trade-token" placeholder="代币地址">
+            <input type="number" id="trade-amount" placeholder="每个钱包的交易数量">
+            <label>
+                <input type="checkbox" id="trade-amount-in-sol"> 金额以 SOL 计
+            </label>
+            <input type="number" id="trade-slippage" placeholder="滑点 (基点)">
+            <input type="number" id="trade-priority-fee" placeholder="优先费 (microlamports)">
+            <button id="execute-batch-trade">执行批量交易</button>
+            <button id="close-batch-trade-modal">关闭</button>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script>
     <script src="renderer.js"></script>
 </body>
