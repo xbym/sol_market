@@ -9,6 +9,8 @@
   "dependencies": {
     "@solana/web3.js": "^1.95.2",
     "axios": "^0.24.0",
+    "axios-retry": "^4.5.0",
+    "bs58": "^6.0.0",
     "chart.js": "^3.7.0",
     "csv-stringify": "^6.5.1",
     "moment": "^2.30.1"

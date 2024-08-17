@@ -2,10 +2,12 @@ const tokenAddress = "89jtQzY4uqYUGby5AftFg6SnFNB9gfeptnpxUcY5pump"; // 替换�
 const ctx = document.getElementById('price-chart').getContext('2d');
 let priceChart;
 
+// 初始化函数
 async function initialize() {
     await updateTokenInfo();
     initChart();
     await initializeWallets();
+    // 获取初始价格
     const initialPrice = await window.electronAPI.getTokenPrice(tokenAddress);
     if (initialPrice) {
         updateChart(initialPrice, new Date());
@@ -13,6 +15,7 @@ async function initialize() {
     }
 }
 
+// 更新代币信息
 async function updateTokenInfo() {
     try {
         const tokenInfo = await window.electronAPI.getTokenInfo(tokenAddress);
@@ -27,6 +30,7 @@ async function updateTokenInfo() {
     }
 }
 
+// 初始化图表
 function initChart() {
     const data = {
         datasets: [{
@@ -68,6 +72,7 @@ function initChart() {
     });
 }
 
+// 更新图表
 function updateChart(price, timestamp) {
     const time = moment(timestamp);
     priceChart.data.datasets[0].data.push({x: time, y: price});
@@ -79,21 +84,24 @@ function updateChart(price, timestamp) {
     priceChart.update();
 }
 
+// 处理价格更新
 window.electronAPI.onPriceUpdate((event, data) => {
     const price = parseFloat(data.price.toFixed(10));
     document.getElementById('current-price').textContent = price;
     updateChart(price, data.timestamp);
 });
 
+// 生成API密钥和钱包
 document.getElementById('generate-api-key').addEventListener('click', async () => {
     const result = await window.electronAPI.generateApiKey();
     if (result.success) {
-        displayWallet(result.wallet, document.querySelectorAll('.wallet-item').length + 1);
+        displayWallet(result.wallet);
     } else {
         alert('生成API密钥和钱包失败: ' + result.error);
     }
 });
 
+// 批量生成钱包
 document.getElementById('generate-wallets').addEventListener('click', async () => {
     const count = parseInt(document.getElementById('wallet-count').value);
     if (count < 1 || count > 50) {
@@ -101,55 +109,60 @@ document.getElementById('generate-wallets').addEventListener('click', async () =
         return;
     }
     const wallets = await window.electronAPI.generateWallets(count);
-    const startIndex = document.querySelectorAll('.wallet-item').length + 1;
-    wallets.forEach((wallet, index) => displayWallet(wallet, startIndex + index));
+    wallets.forEach(displayWallet);
 });
 
+// 刷新余额
 document.getElementById('refresh-balances').addEventListener('click', refreshAllWalletBalances);
 
+// 清空批量钱包
 document.getElementById('clear-wallets').addEventListener('click', async () => {
     const result = await window.electronAPI.clearRegularWallets();
     if (result.success) {
         document.getElementById('wallet-list').innerHTML = '';
         const apiWallets = await window.electronAPI.getWallets();
-        apiWallets.forEach((wallet, index) => displayWallet(wallet, index + 1));
+        apiWallets.forEach(displayWallet);
     }
 });
 
+// 导出钱包
 document.getElementById('export-wallets').addEventListener('click', async () => {
     const result = await window.electronAPI.exportWallets();
-    alert(result.message);
+    if (result.success) {
+        alert(result.message);
+    } else {
+        alert('导出失败: ' + result.message);
+    }
 });
 
+// 导入钱包
 document.getElementById('import-wallets').addEventListener('click', async () => {
     const result = await window.electronAPI.importWallets();
     if (result.success) {
         alert(result.message);
-        const startIndex = document.querySelectorAll('.wallet-item').length + 1;
-        result.newWallets.forEach((wallet, index) => displayWallet(wallet, startIndex + index));
+        result.newWallets.forEach(displayWallet);
     } else {
         alert('导入失败: ' + result.message);
     }
 });
 
-async function displayWallet(wallet, index) {
+// 显示钱包
+function displayWallet(wallet) {
     const walletList = document.getElementById('wallet-list');
     const walletItem = document.createElement('div');
     walletItem.className = 'wallet-item';
     walletItem.innerHTML = `
-        <div>
-            <p>序号: ${index}</p>
-            <p>地址: ${wallet.publicKey}</p>
-            <p>类型: ${wallet.type === 'api' ? 'API钱包' : '普通钱包'}</p>
-            <p>SOL余额: <span class="sol-balance">加载中...</span></p>
-            <p class="token-balance"></p>
-        </div>
-        <input type="checkbox" class="wallet-select" data-public-key="${wallet.publicKey}">
+        <input type="checkbox" class="wallet-checkbox" data-public-key="${wallet.publicKey}">
+        <p>地址: ${wallet.publicKey}</p>
+        <p>类型: ${wallet.type === 'api' ? 'API钱包' : '普通钱包'}</p>
+        <p>SOL余额: <span class="sol-balance">加载中...</span></p>
+        <p class="token-balance"></p>
     `;
     walletList.appendChild(walletItem);
-    await updateWalletBalance(wallet.publicKey);
+    updateWalletBalance(wallet.publicKey);
 }
 
+// 更新钱包余额
 async function updateWalletBalance(publicKey) {
     const balance = await window.electronAPI.getWalletBalance(publicKey);
     const walletItem = Array.from(document.getElementsByClassName('wallet-item')).find(item => item.innerHTML.includes(publicKey));
@@ -164,6 +177,7 @@ async function updateWalletBalance(publicKey) {
     }
 }
 
+// 刷新所有钱包余额
 async function refreshAllWalletBalances() {
     const wallets = await window.electronAPI.getWallets();
     for (const wallet of wallets) {
@@ -171,25 +185,20 @@ async function refreshAllWalletBalances() {
     }
 }
 
+// 初始化钱包列表
 async function initializeWallets() {
     const wallets = await window.electronAPI.getWallets();
-    wallets.forEach((wallet, index) => displayWallet(wallet, index + 1));
+    wallets.forEach(displayWallet);
 }
 
-document.getElementById('open-batch-trade-modal').addEventListener('click', () => {
-    document.getElementById('batch-trade-modal').style.display = 'block';
-});
-
-document.getElementById('close-batch-trade-modal').addEventListener('click', () => {
-    document.getElementById('batch-trade-modal').style.display = 'none';
-});
-
+// 执行批量交易
+// 在 renderer.js 中
 document.getElementById('execute-batch-trade').addEventListener('click', async () => {
-    const selectedWallets = Array.from(document.querySelectorAll('.wallet-select:checked'))
+    const selectedWallets = Array.from(document.querySelectorAll('.wallet-checkbox:checked'))
         .map(checkbox => checkbox.dataset.publicKey);
 
     if (selectedWallets.length === 0) {
-        alert('请选择至少一个钱包进行交易');
+        alert('请选择至少一个钱包');
         return;
     }
 
@@ -197,30 +206,30 @@ document.getElementById('execute-batch-trade').addEventListener('click', async (
         mode: document.getElementById('trade-mode').value,
         token: document.getElementById('trade-token').value,
         amount: parseFloat(document.getElementById('trade-amount').value),
-        amountInSol: document.getElementById('trade-amount-in-sol').checked,
+        amountInSol: document.getElementById('amount-in-sol').checked,
         slippage: parseInt(document.getElementById('trade-slippage').value),
-        priorityFee: parseInt(document.getElementById('trade-priority-fee').value),
+        priorityFee: parseFloat(document.getElementById('trade-priority-fee').value)
     };
 
-    const results = await Promise.all(selectedWallets.map(publicKey => 
-        window.electronAPI.executeTrade({ ...tradeParams, publicKey })
-    ));
+    const delay = parseInt(document.getElementById('trade-delay').value);
 
-    displayBatchTradeResults(results, selectedWallets);
+    // 清空之前的交易结果
+    document.getElementById('trade-results').innerHTML = '';
+
+    // 执行批量交易
+    window.electronAPI.executeBatchTrade(selectedWallets, tradeParams, delay);
 });
 
-function displayBatchTradeResults(results, wallets) {
-    let message = '批量交易结果:\n\n';
-    results.forEach((result, index) => {
-        if (result.success) {
-            message += `钱包 ${index + 1} (${wallets[index]}): 成功\n`;
-            message += `  签名: ${result.signature}\n\n`;
-        } else {
-            message += `钱包 ${index + 1} (${wallets[index]}): 失败\n`;
-            message += `  原因: ${result.error}\n\n`;
-        }
-    });
-    alert(message);
-}
+// 处理交易结果
+window.electronAPI.onTradeResult((event, result) => {
+    const resultElement = document.createElement('div');
+    resultElement.innerHTML = `
+        <p>钱包: ${result.wallet}</p>
+        <p>状态: ${result.success ? '成功' : '失败'}</p>
+        <p>${result.success ? '交易签名: ' + result.signature : '错误: ' + result.error}</p>
+    `;
+    document.getElementById('trade-results').appendChild(resultElement);
+});
 
+// 启动应用
 initialize();

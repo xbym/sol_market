@@ -1,9 +1,10 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
-const fs = require('fs').promises;
 const path = require('path');
+const fs = require('fs').promises;
 const axios = require('axios');
-const { Connection, PublicKey, Keypair, Transaction, SystemProgram, sendAndConfirmTransaction } = require('@solana/web3.js');
+const { Connection, PublicKey, Keypair } = require('@solana/web3.js');
 const { getPumpFunQuote, getTokenInfo, getTokenBalance } = require('./pumpFunAPI');
+const bs58 = require('bs58').default;
 
 let mainWindow;
 let wallets = [];
@@ -69,8 +70,8 @@ ipcMain.handle('generate-wallets', async (event, count) => {
   for (let i = 0; i < count; i++) {
     const keypair = Keypair.generate();
     const wallet = {
-      publicKey: keypair.publicKey.toString(),
-      privateKey: Buffer.from(keypair.secretKey).toString('hex'),
+      publicKey: keypair.publicKey.toBase58(),
+      privateKey: bs58.encode(keypair.secretKey), // 使用 Base58 编码
       type: 'regular'
     };
     newWallets.push(wallet);
@@ -138,70 +139,87 @@ ipcMain.handle('import-wallets', async () => {
   return { success: false, message: '导入已取消' };
 });
 
-// 批量转账 SOL
-ipcMain.handle('batch-transfer-sol', async (event, transactions) => {
-  try {
-    const results = [];
-    for (const tx of transactions) {
-      const fromWallet = wallets.find(w => w.publicKey === tx.from);
-      if (!fromWallet) {
-        results.push({ status: 'failed', message: `钱包 ${tx.from} 未找到` });
-        continue;
-      }
+// 执行单个交易
+async function executeTrade(wallet, tradeParams) {
+  const config = await getConfig();
+  const apiKey = config.apiKey;
 
-      const fromPubkey = new PublicKey(tx.from);
-      const toPubkey = new PublicKey(tx.to);
-      const lamports = tx.amount * LAMPORTS_PER_SOL;
-
-      const transaction = new Transaction().add(
-        SystemProgram.transfer({
-          fromPubkey,
-          toPubkey,
-          lamports
-        })
-      );
-
-      const signers = [Keypair.fromSecretKey(Buffer.from(fromWallet.privateKey, 'hex'))];
-
-      const signature = await sendAndConfirmTransaction(
-        connection,
-        transaction,
-        signers
-      );
-
-      results.push({ status: 'success', signature, from: tx.from, to: tx.to, amount: tx.amount });
-    }
-    return results;
-  } catch (error) {
-    console.error('Batch transfer error:', error);
-    return { error: error.message };
+  if (!apiKey) {
+    throw new Error('API key not found in configuration');
   }
-});
 
-// 执行交易
-ipcMain.handle('execute-trade', async (event, tradeParams) => {
+  console.log('Executing trade with params:', JSON.stringify(tradeParams));
+  console.log('Using wallet:', wallet.publicKey);
+
+  // 确保私钥格式正确
+  let privateKey = wallet.privateKey;
+  if (privateKey.length === 128) {
+    // 如果私钥是 64 字节的十六进制字符串，转换为 Base58
+    privateKey = bs58.encode(Buffer.from(privateKey, 'hex'));
+  }
+
   try {
-    const config = JSON.parse(await fs.readFile('config.json', 'utf8'));
     const response = await axios.post('https://rpc.api-pump.fun/trade', {
       mode: tradeParams.mode,
       token: tradeParams.token,
-      amount: tradeParams.amount,
+      amount: Math.round(tradeParams.amount * 1e9), // 转换为 lamports
       amountInSol: tradeParams.amountInSol,
       slippage: tradeParams.slippage,
-      priorityFee: tradeParams.priorityFee,
-      private: tradeParams.privateKey // 注意：仅在用户提供私钥时才包含这个字段
+      priorityFee: Math.round(tradeParams.priorityFee * 1e9), // 转换为 lamports
+      private: privateKey
     }, {
       headers: {
         'Content-Type': 'application/json',
-        'x-api-key': config.apiKey
+        'x-api-key': apiKey
       }
     });
 
-    return { success: true, signature: response.data.signature };
+    console.log('API Response:', response.data);
+    return { success: true, signature: response.data.signature, wallet: wallet.publicKey };
   } catch (error) {
-    console.error('Trade execution error:', error);
-    return { success: false, error: error.response ? error.response.data : error.message };
+    console.error('Trade execution error:', error.message);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+      console.error('Response headers:', error.response.headers);
+    }
+    return { success: false, error: error.message, wallet: wallet.publicKey };
   }
+}
+
+async function getConfig() {
+  try {
+    const configPath = path.join(__dirname, 'config.json');
+    const configData = await fs.readFile(configPath, 'utf8');
+    return JSON.parse(configData);
+  } catch (error) {
+    console.error('Error reading config file:', error.message);
+    throw error;
+  }
+}
+
+// 批量交易处理
+ipcMain.handle('execute-batch-trade', async (event, selectedWallets, tradeParams, delay) => {
+  const results = [];
+  const shuffledWallets = selectedWallets.sort(() => Math.random() - 0.5);
+
+  for (const walletPublicKey of shuffledWallets) {
+    const wallet = wallets.find(w => w.publicKey === walletPublicKey);
+    if (wallet) {
+      await new Promise(resolve => setTimeout(resolve, delay * 1000)); // 延迟执行
+      try {
+        const result = await executeTrade(wallet, tradeParams);
+        results.push(result);
+        event.sender.send('trade-result', result);
+      } catch (error) {
+        const errorResult = { success: false, error: error.message, wallet: wallet.publicKey };
+        results.push(errorResult);
+        event.sender.send('trade-result', errorResult);
+      }
+    }
+  }
+
+  return results;
 });
 
 // 价格更新逻辑

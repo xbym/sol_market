@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getTokenInfo: (tokenAddress) => ipcRenderer.invoke('get-token-info', tokenAddress),
   getTokenPrice: (tokenAddress) => ipcRenderer.invoke('get-token-price', tokenAddress),
   getTokenBalance: (tokenAddress, walletAddress) => ipcRenderer.invoke('get-token-balance', tokenAddress, walletAddress),
+  onPriceUpdate: (callback) => ipcRenderer.on('price-update', callback),
   generateApiKey: () => ipcRenderer.invoke('generate-api-key'),
   generateWallets: (count) => ipcRenderer.invoke('generate-wallets', count),
   getWallets: () => ipcRenderer.invoke('get-wallets'),
@@ -11,7 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearRegularWallets: () => ipcRenderer.invoke('clear-regular-wallets'),
   exportWallets: () => ipcRenderer.invoke('export-wallets'),
   importWallets: () => ipcRenderer.invoke('import-wallets'),
-  batchTransferSOL: (transactions) => ipcRenderer.invoke('batch-transfer-sol', transactions),
-  executeTrade: (tradeParams) => ipcRenderer.invoke('execute-trade', tradeParams),
-  onPriceUpdate: (callback) => ipcRenderer.on('price-update', callback),
+  executeBatchTrade: (selectedWallets, tradeParams, delay) => 
+    ipcRenderer.invoke('execute-batch-trade', selectedWallets, tradeParams, delay),
+  onTradeResult: (callback) => ipcRenderer.on('trade-result', callback)
 });
