@@ -12,6 +12,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clearRegularWallets: () => ipcRenderer.invoke('clear-regular-wallets'),
   exportWallets: () => ipcRenderer.invoke('export-wallets'),
   importWallets: () => ipcRenderer.invoke('import-wallets'),
+  updateMonitoredToken: (address) => ipcRenderer.invoke('updateMonitoredToken', address),
+  getWalletBalance: (publicKey) => ipcRenderer.invoke('get-wallet-balance', publicKey),
+  updateMonitoredToken: (address) => ipcRenderer.invoke('updateMonitoredToken', address),
   executeBatchTrade: (selectedWallets, tradeParams, delay) => 
     ipcRenderer.invoke('execute-batch-trade', selectedWallets, tradeParams, delay),
   onTradeResult: (callback) => ipcRenderer.on('trade-result', callback)

@@ -114,3 +114,11 @@ label {
 #token-info p {
     margin: 5px 0;
 }
+
+.wallet-item p {
+    margin: 5px 0;
+}
+
+.wallet-item .token-balance, .wallet-item .token-address {
+    word-break: break-all;
+}

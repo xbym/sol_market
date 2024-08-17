@@ -8,7 +8,7 @@ const bs58 = require('bs58').default;
 
 let mainWindow;
 let wallets = [];
-const tokenAddress = "89jtQzY4uqYUGby5AftFg6SnFNB9gfeptnpxUcY5pump"; // 替换为您的代币地址
+let monitoredTokenAddress = "89jtQzY4uqYUGby5AftFg6SnFNB9gfeptnpxUcY5pump";
 const connection = new Connection("https://api.mainnet-beta.solana.com", "confirmed");
 
 function createWindow() {
@@ -45,6 +45,12 @@ ipcMain.handle('get-token-price', async (event, tokenAddress) => {
   return quoteData ? 1 / quoteData.amountOut : null;
 });
 
+// 更新监测的代币地址
+ipcMain.handle('updateMonitoredToken', async (event, newAddress) => {
+  monitoredTokenAddress = newAddress;
+  await updateAndBroadcastPrice();
+});
+
 // 生成 API 密钥和钱包
 ipcMain.handle('generate-api-key', async () => {
   try {
@@ -71,7 +77,7 @@ ipcMain.handle('generate-wallets', async (event, count) => {
     const keypair = Keypair.generate();
     const wallet = {
       publicKey: keypair.publicKey.toBase58(),
-      privateKey: bs58.encode(keypair.secretKey), // 使用 Base58 编码
+      privateKey: bs58.encode(keypair.secretKey),
       type: 'regular'
     };
     newWallets.push(wallet);
@@ -89,7 +95,7 @@ ipcMain.handle('get-wallets', () => {
 ipcMain.handle('get-wallet-balance', async (event, publicKey) => {
   try {
     const solBalance = await connection.getBalance(new PublicKey(publicKey)) / 1e9;
-    const tokenBalance = await getTokenBalance(tokenAddress, publicKey);
+    const tokenBalance = await getTokenBalance(monitoredTokenAddress, publicKey);
     return { solBalance, tokenBalance };
   } catch (error) {
     return { error: error.message };
@@ -226,10 +232,14 @@ ipcMain.handle('execute-batch-trade', async (event, selectedWallets, tradeParams
 // 价格更新逻辑
 async function updateAndBroadcastPrice() {
   try {
-    const quoteData = await getPumpFunQuote(tokenAddress, 1, 'buy');
+    const quoteData = await getPumpFunQuote(monitoredTokenAddress, 1, 'buy');
     if (quoteData && quoteData.amountOut) {
       const price = 1 / quoteData.amountOut;
-      mainWindow.webContents.send('price-update', { price, timestamp: new Date() });
+      mainWindow.webContents.send('price-update', { 
+        price, 
+        timestamp: new Date(),
+        tokenAddress: monitoredTokenAddress 
+      });
     }
   } catch (error) {
     console.error('Error fetching price:', error);

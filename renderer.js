@@ -1,4 +1,4 @@
-const tokenAddress = "89jtQzY4uqYUGby5AftFg6SnFNB9gfeptnpxUcY5pump"; // 替换为您的代币地址
+let currentTokenAddress = "89jtQzY4uqYUGby5AftFg6SnFNB9gfeptnpxUcY5pump";
 const ctx = document.getElementById('price-chart').getContext('2d');
 let priceChart;
 
@@ -8,17 +8,43 @@ async function initialize() {
     initChart();
     await initializeWallets();
     // 获取初始价格
-    const initialPrice = await window.electronAPI.getTokenPrice(tokenAddress);
+    const initialPrice = await window.electronAPI.getTokenPrice(currentTokenAddress);
     if (initialPrice) {
         updateChart(initialPrice, new Date());
         document.getElementById('current-price').textContent = initialPrice.toFixed(10);
+    }
+
+    // 添加更新合约地址的事件监听器
+    document.getElementById('update-contract').addEventListener('click', updateContractAddress);
+
+    // 添加其他事件监听器
+    document.getElementById('generate-api-key').addEventListener('click', generateApiKey);
+    document.getElementById('generate-wallets').addEventListener('click', generateWallets);
+    document.getElementById('refresh-balances').addEventListener('click', refreshAllWalletBalances);
+    document.getElementById('clear-wallets').addEventListener('click', clearWallets);
+    document.getElementById('export-wallets').addEventListener('click', exportWallets);
+    document.getElementById('import-wallets').addEventListener('click', importWallets);
+    document.getElementById('execute-batch-trade').addEventListener('click', executeBatchTrade);
+}
+
+// 更新合约地址
+async function updateContractAddress() {
+    const newAddress = document.getElementById('contract-address').value.trim();
+    if (newAddress && newAddress !== currentTokenAddress) {
+        currentTokenAddress = newAddress;
+        await updateTokenInfo();
+        // 重置图表
+        priceChart.data.datasets[0].data = [];
+        priceChart.update();
+        // 通知主进程更新监测的代币地址
+        window.electronAPI.updateMonitoredToken(currentTokenAddress);
     }
 }
 
 // 更新代币信息
 async function updateTokenInfo() {
     try {
-        const tokenInfo = await window.electronAPI.getTokenInfo(tokenAddress);
+        const tokenInfo = await window.electronAPI.getTokenInfo(currentTokenAddress);
         document.getElementById('token-info').innerHTML = `
             <p>名称: ${tokenInfo.Data.Name}</p>
             <p>符号: ${tokenInfo.Data.Symbol}</p>
@@ -86,23 +112,25 @@ function updateChart(price, timestamp) {
 
 // 处理价格更新
 window.electronAPI.onPriceUpdate((event, data) => {
-    const price = parseFloat(data.price.toFixed(10));
-    document.getElementById('current-price').textContent = price;
-    updateChart(price, data.timestamp);
+    if (data.tokenAddress === currentTokenAddress) {
+        const price = parseFloat(data.price.toFixed(10));
+        document.getElementById('current-price').textContent = price;
+        updateChart(price, data.timestamp);
+    }
 });
 
 // 生成API密钥和钱包
-document.getElementById('generate-api-key').addEventListener('click', async () => {
+async function generateApiKey() {
     const result = await window.electronAPI.generateApiKey();
     if (result.success) {
         displayWallet(result.wallet);
     } else {
         alert('生成API密钥和钱包失败: ' + result.error);
     }
-});
+}
 
 // 批量生成钱包
-document.getElementById('generate-wallets').addEventListener('click', async () => {
+async function generateWallets() {
     const count = parseInt(document.getElementById('wallet-count').value);
     if (count < 1 || count > 50) {
         alert('请输入1-50之间的数字');
@@ -110,33 +138,30 @@ document.getElementById('generate-wallets').addEventListener('click', async () =
     }
     const wallets = await window.electronAPI.generateWallets(count);
     wallets.forEach(displayWallet);
-});
-
-// 刷新余额
-document.getElementById('refresh-balances').addEventListener('click', refreshAllWalletBalances);
+}
 
 // 清空批量钱包
-document.getElementById('clear-wallets').addEventListener('click', async () => {
+async function clearWallets() {
     const result = await window.electronAPI.clearRegularWallets();
     if (result.success) {
         document.getElementById('wallet-list').innerHTML = '';
         const apiWallets = await window.electronAPI.getWallets();
         apiWallets.forEach(displayWallet);
     }
-});
+}
 
 // 导出钱包
-document.getElementById('export-wallets').addEventListener('click', async () => {
+async function exportWallets() {
     const result = await window.electronAPI.exportWallets();
     if (result.success) {
         alert(result.message);
     } else {
         alert('导出失败: ' + result.message);
     }
-});
+}
 
 // 导入钱包
-document.getElementById('import-wallets').addEventListener('click', async () => {
+async function importWallets() {
     const result = await window.electronAPI.importWallets();
     if (result.success) {
         alert(result.message);
@@ -144,7 +169,7 @@ document.getElementById('import-wallets').addEventListener('click', async () => 
     } else {
         alert('导入失败: ' + result.message);
     }
-});
+}
 
 // 显示钱包
 function displayWallet(wallet) {
@@ -192,7 +217,7 @@ async function initializeWallets() {
 }
 
 // 执行批量交易
-document.getElementById('execute-batch-trade').addEventListener('click', async () => {
+async function executeBatchTrade() {
     const selectedWallets = Array.from(document.querySelectorAll('.wallet-checkbox:checked'))
         .map(checkbox => checkbox.dataset.publicKey);
 
@@ -223,7 +248,7 @@ document.getElementById('execute-batch-trade').addEventListener('click', async (
 
     // 执行批量交易
     window.electronAPI.executeBatchTrade(selectedWallets, tradeParams, delay);
-});
+}
 
 // 处理交易结果
 window.electronAPI.onTradeResult((event, result) => {
