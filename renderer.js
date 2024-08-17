@@ -192,7 +192,6 @@ async function initializeWallets() {
 }
 
 // 执行批量交易
-// 在 renderer.js 中
 document.getElementById('execute-batch-trade').addEventListener('click', async () => {
     const selectedWallets = Array.from(document.querySelectorAll('.wallet-checkbox:checked'))
         .map(checkbox => checkbox.dataset.publicKey);
@@ -202,12 +201,18 @@ document.getElementById('execute-batch-trade').addEventListener('click', async (
         return;
     }
 
+    const slippageInput = parseFloat(document.getElementById('trade-slippage').value);
+    if (isNaN(slippageInput) || slippageInput < 0 || slippageInput > 100) {
+        alert('请输入0到100之间的滑点百分比');
+        return;
+    }
+
     const tradeParams = {
         mode: document.getElementById('trade-mode').value,
         token: document.getElementById('trade-token').value,
         amount: parseFloat(document.getElementById('trade-amount').value),
         amountInSol: document.getElementById('amount-in-sol').checked,
-        slippage: parseInt(document.getElementById('trade-slippage').value),
+        slippage: slippageInput / 100, // 将百分比转换为小数
         priorityFee: parseFloat(document.getElementById('trade-priority-fee').value)
     };
 
