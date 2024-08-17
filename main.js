@@ -159,12 +159,13 @@ async function executeTrade(wallet, tradeParams) {
   }
 
   try {
+    const slippageInBasisPoints = Math.round(tradeParams.slippage * 10000); // 转换为基点
     const response = await axios.post('https://rpc.api-pump.fun/trade', {
       mode: tradeParams.mode,
       token: tradeParams.token,
       amount: Math.round(tradeParams.amount * 1e9), // 转换为 lamports
       amountInSol: tradeParams.amountInSol,
-      slippage: tradeParams.slippage,
+      slippage: slippageInBasisPoints,
       priorityFee: Math.round(tradeParams.priorityFee * 1e9), // 转换为 lamports
       private: privateKey
     }, {

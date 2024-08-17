@@ -35,7 +35,7 @@
                 <label>
                     <input type="checkbox" id="amount-in-sol"> 数量以SOL计
                 </label>
-                <input type="number" id="trade-slippage" placeholder="滑点 (基点)">
+                <input type="number" id="trade-slippage" min="0" max="100" step="0.01" placeholder="滑点 (%)">
                 <input type="number" id="trade-priority-fee" placeholder="优先级费用 (微lamports)">
                 <input type="number" id="trade-delay" placeholder="延迟 (秒)">
                 <button id="execute-batch-trade">执行批量交易</button>
