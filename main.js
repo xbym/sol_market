@@ -96,8 +96,13 @@ ipcMain.handle('get-wallet-balance', async (event, publicKey) => {
   try {
     const solBalance = await connection.getBalance(new PublicKey(publicKey)) / 1e9;
     const tokenBalance = await getTokenBalance(monitoredTokenAddress, publicKey);
-    return { solBalance, tokenBalance };
+    return { 
+      solBalance, 
+      tokenBalance: tokenBalance.balance,
+      tokenAddress: monitoredTokenAddress
+    };
   } catch (error) {
+    console.error('Error getting wallet balance:', error);
     return { error: error.message };
   }
 });

@@ -72,9 +72,12 @@ async function getTokenInfo(token) {
 }
 
 // 获取代币余额
+// 在 pumpFunAPI.js 中添加或修改以下函数
+
 async function getTokenBalance(token, wallet) {
     return makeApiRequest('/balance', { token, wallet });
 }
+
 
 // 获取绑定曲线信息
 async function getBondingCurveInfo(token) {

@@ -37,10 +37,11 @@ async function updateContractAddress() {
         priceChart.data.datasets[0].data = [];
         priceChart.update();
         // 通知主进程更新监测的代币地址
-        window.electronAPI.updateMonitoredToken(currentTokenAddress);
+        await window.electronAPI.updateMonitoredToken(currentTokenAddress);
+        // 刷新所有钱包余额
+        await refreshAllWalletBalances();
     }
 }
-
 // 更新代币信息
 async function updateTokenInfo() {
     try {
@@ -181,7 +182,7 @@ function displayWallet(wallet) {
         <p>地址: ${wallet.publicKey}</p>
         <p>类型: ${wallet.type === 'api' ? 'API钱包' : '普通钱包'}</p>
         <p>SOL余额: <span class="sol-balance">加载中...</span></p>
-        <p class="token-balance"></p>
+        <p class="token-balance">代币余额: 加载中...</p>
     `;
     walletList.appendChild(walletItem);
     updateWalletBalance(wallet.publicKey);
@@ -189,16 +190,20 @@ function displayWallet(wallet) {
 
 // 更新钱包余额
 async function updateWalletBalance(publicKey) {
-    const balance = await window.electronAPI.getWalletBalance(publicKey);
-    const walletItem = Array.from(document.getElementsByClassName('wallet-item')).find(item => item.innerHTML.includes(publicKey));
-    if (walletItem) {
-        walletItem.querySelector('.sol-balance').textContent = balance.solBalance.toFixed(9) + ' SOL';
-        const tokenBalanceElement = walletItem.querySelector('.token-balance');
-        if (balance.tokenBalance > 0) {
-            tokenBalanceElement.textContent = `代币余额: ${balance.tokenBalance}`;
-        } else {
-            tokenBalanceElement.textContent = '';
+    try {
+        const balance = await window.electronAPI.getWalletBalance(publicKey);
+        const walletItem = Array.from(document.getElementsByClassName('wallet-item')).find(item => item.innerHTML.includes(publicKey));
+        if (walletItem) {
+            walletItem.querySelector('.sol-balance').textContent = balance.solBalance.toFixed(9) + ' SOL';
+            const tokenBalanceElement = walletItem.querySelector('.token-balance');
+            if (balance.tokenBalance > 0) {
+                tokenBalanceElement.textContent = `${currentTokenAddress} 余额: ${balance.tokenBalance}`;
+            } else {
+                tokenBalanceElement.textContent = `${currentTokenAddress} 余额: 0`;
+            }
         }
+    } catch (error) {
+        console.error('Error updating wallet balance:', error);
     }
 }
 
