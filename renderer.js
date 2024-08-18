@@ -237,10 +237,13 @@ async function executeBatchTrade() {
         return;
     }
 
+    const mode = document.getElementById('trade-mode').value;
+    const sellPercentage = mode === 'sell' ? parseFloat(document.getElementById('sell-percentage').value) : null;
+
     const tradeParams = {
-        mode: document.getElementById('trade-mode').value,
+        mode: mode,
         token: document.getElementById('trade-token').value,
-        amount: parseFloat(document.getElementById('trade-amount').value),
+        amount: mode === 'buy' ? parseFloat(document.getElementById('trade-amount').value) : sellPercentage,
         amountInSol: document.getElementById('amount-in-sol').checked,
         slippage: slippageInput / 100, // 将百分比转换为小数
         priorityFee: parseFloat(document.getElementById('trade-priority-fee').value)
@@ -254,6 +257,22 @@ async function executeBatchTrade() {
     // 执行批量交易
     window.electronAPI.executeBatchTrade(selectedWallets, tradeParams, delay);
 }
+
+document.getElementById('trade-mode').addEventListener('change', function() {
+    const sellPercentageSelect = document.getElementById('sell-percentage');
+    const tradeAmountInput = document.getElementById('trade-amount');
+    const amountInSolCheckbox = document.getElementById('amount-in-sol');
+
+    if (this.value === 'sell') {
+        sellPercentageSelect.style.display = 'inline-block';
+        tradeAmountInput.style.display = 'none';
+        amountInSolCheckbox.style.display = 'none';
+    } else {
+        sellPercentageSelect.style.display = 'none';
+        tradeAmountInput.style.display = 'inline-block';
+        amountInSolCheckbox.style.display = 'inline-block';
+    }
+});
 
 // 处理交易结果
 window.electronAPI.onTradeResult((event, result) => {

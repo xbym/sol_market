@@ -156,48 +156,59 @@ async function executeTrade(wallet, tradeParams) {
   const apiKey = config.apiKey;
 
   if (!apiKey) {
-    throw new Error('API key not found in configuration');
+      throw new Error('API key not found in configuration');
   }
 
   console.log('Executing trade with params:', JSON.stringify(tradeParams));
   console.log('Using wallet:', wallet.publicKey);
 
-  // 确保私钥格式正确
   let privateKey = wallet.privateKey;
   if (privateKey.length === 128) {
-    // 如果私钥是 64 字节的十六进制字符串，转换为 Base58
-    privateKey = bs58.encode(Buffer.from(privateKey, 'hex'));
+      privateKey = bs58.encode(Buffer.from(privateKey, 'hex'));
   }
 
   try {
-    const slippageInBasisPoints = Math.round(tradeParams.slippage * 10000); // 转换为基点
-    const response = await axios.post('https://rpc.api-pump.fun/trade', {
-      mode: tradeParams.mode,
-      token: tradeParams.token,
-      amount: Math.round(tradeParams.amount * 1e9), // 转换为 lamports
-      amountInSol: tradeParams.amountInSol,
-      slippage: slippageInBasisPoints,
-      priorityFee: Math.round(tradeParams.priorityFee * 1e9), // 转换为 lamports
-      private: privateKey
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey
-      }
-    });
+      let amount = tradeParams.amount;
 
-    console.log('API Response:', response.data);
-    return { success: true, signature: response.data.signature, wallet: wallet.publicKey };
+      // 如果是卖出操作且金额是百分比
+      if (tradeParams.mode === 'sell' && tradeParams.amount <= 1) {
+          // 将小数转换为百分比字符串
+          amount = `${(tradeParams.amount * 100).toFixed(0)}%`;
+          console.log(`Selling ${amount} of balance`);
+      } else if (tradeParams.mode === 'buy') {
+          // 买入操作时，将金额转换为lamports
+          amount = Math.round(amount * 1e9);
+      }
+
+      const slippageInBasisPoints = Math.round(tradeParams.slippage * 10000);
+      const response = await axios.post('https://rpc.api-pump.fun/trade', {
+          mode: tradeParams.mode,
+          token: tradeParams.token,
+          amount: amount,
+          amountInSol: tradeParams.amountInSol,
+          slippage: slippageInBasisPoints,
+          priorityFee: Math.round(tradeParams.priorityFee * 1e9),
+          private: privateKey
+      }, {
+          headers: {
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey
+          }
+      });
+
+      console.log('API Response:', response.data);
+      return { success: true, signature: response.data.signature, wallet: wallet.publicKey };
   } catch (error) {
-    console.error('Trade execution error:', error.message);
-    if (error.response) {
-      console.error('Response data:', error.response.data);
-      console.error('Response status:', error.response.status);
-      console.error('Response headers:', error.response.headers);
-    }
-    return { success: false, error: error.message, wallet: wallet.publicKey };
+      console.error('Trade execution error:', error.message);
+      if (error.response) {
+          console.error('Response data:', error.response.data);
+          console.error('Response status:', error.response.status);
+          console.error('Response headers:', error.response.headers);
+      }
+      return { success: false, error: error.message, wallet: wallet.publicKey };
   }
 }
+
 
 async function getConfig() {
   try {
